@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,16 +10,26 @@ public class Player : MonoBehaviour
 {
     private InputAction moveAction;
     private InputAction switchAction;
-    private Rigidbody2D rb;
-    private Collider2D hitbox;
+    public Rigidbody2D rb;
+    public Collider2D hitbox;
 
+    [Header("Movement Settings")]
+    // All curves represent velocity curves
+    public bool xControlIsActive = true;
     public Vector2 moveVector;
-    public AnimationCurve jumpPowerCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
-    public Boolean gravityNormal = true;
+    public float speedMult = 0.5f;
+    public AnimationCurve moveCurve = AnimationCurve.EaseInOut(0, 0, 0.5f, 1);
+    private int moveTimer = 0;
 
-    [SerializeField] private bool hasTouchedGround = false;
+    [Header("Jump Settings")]
+    public bool yControlIsActive = true;
+    public float jumpPowerMult = 6f;
+    public AnimationCurve jumpPowerCurve = AnimationCurve.EaseInOut(0, 1, 0.5f, 0);
+    private bool jumped = false;
+    public bool normalGravity = true;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    //[SerializeField] private bool hasTouchedGround = false;
+
     void Start()
     {
         // Instansiate the doopid things
@@ -27,25 +39,68 @@ public class Player : MonoBehaviour
         hitbox = GetComponent<Collider2D>();
     }
 
-    // Update is called once per frame
     void Update()
     {
         moveVector = moveAction.ReadValue<Vector2>();
 
         if (switchAction.IsPressed())
         {
-            Debug.Log("I'm a general, WEEE!");
+
         }
 
 
         if (moveVector != Vector2.zero) 
         {
-            rb.AddForceX(moveVector.normalized.x);
-            //TODO ADD JUMP PHYSICS
-        };
+            // Movement
+            if (xControlIsActive){MoveX(moveVector.normalized.x);}
+
+            // Jumping
+            if (IsGrounded() && moveVector.y > 0 && !jumped && normalGravity){
+                jumped = true;
+                StartCoroutine(JumpCoroutine());
+            }
+            else if(IsGrounded() && moveVector.y < 0 && !jumped && !normalGravity){
+                jumped = true;
+                StartCoroutine(JumpCoroutine());
+            }
+        }
+        ;
     }
-    bool IsGrounded()
+
+    public void MoveX(float amount)
     {
-        return Physics.Raycast(transform.position, -Vector3.up, 0.1f);
+        if (amount == 0) { moveTimer = 0; }
+
+        if (amount != 0)
+        {
+            float movePower = moveCurve.Evaluate(moveTimer * Time.deltaTime) * speedMult;
+            rb.AddForceX(amount * movePower);
+            moveTimer += 1;
+        }
     }
-}
+
+    private IEnumerator JumpCoroutine()
+    {
+        int timer = 0;
+
+        while (moveVector.y != 0)
+        {
+            float jumpPower = jumpPowerCurve.Evaluate(timer * Time.deltaTime) * jumpPowerMult;
+            rb.AddForceY(moveVector.normalized.y * jumpPower);
+            timer+=1;
+
+            yield return new WaitForEndOfFrame();
+        }
+        jumped = false;
+        yield return new WaitForEndOfFrame();
+    }
+
+    public bool IsGrounded()
+    {
+        return rb.linearVelocity.y == 0;
+    }
+    public void FlipGravity(){
+        normalGravity = !normalGravity;
+        rb.gravityScale *= -1;
+    }
+ }

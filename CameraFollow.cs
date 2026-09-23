@@ -5,19 +5,18 @@ public class CameraFollow : MonoBehaviour
 {
     public Camera camera;
     public GameObject followObject;
-    public float lerpAgressiveness = 0.02f;
-    public float maxCameraDistance = 10f;
+    public float lerpAgressiveness = 0.1f;
+    public float maxCameraDistance = 2f;
     public float cameraHeightDistance = -10f;
+    public Vector3 cameraOffset = Vector3.zero; // Add camera offset
     public Vector2 distanceVector = Vector2.zero;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         camera = GetComponentInChildren<Camera>();
         transform.position = followObject.transform.position;
     }
 
-    // Update is called once per frame
     void Update()
     {
         // Follow the camera with lerp
